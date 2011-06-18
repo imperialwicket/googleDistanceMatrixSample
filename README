@@ -1,0 +1,1 @@
+Sample usage of Google Distance Matrix API.  Starts with Google's sample code, strips the map, and adds support for dynamic origins/destinations, and user-controlled pagination-like loading to avoid OVER_QUERY_LIMIT restrictions.  

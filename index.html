@@ -151,11 +151,17 @@
     document.getElementById('initButton').disabled=true;
   }
   
+  function enableInitButton(){
+    document.getElementById('initButton').disabled=false;
+  }
+  
   function disableUpdateButton(withTimer){
     document.getElementById('updateButton').disabled=true;
     if(withTimer){
         setTimeout("enableUpdateButton()",10000);
         document.getElementById('updateButton').value="Wait 10 seconds...";
+    }else{
+        enableClearButton();
     }
   }
   
@@ -164,6 +170,28 @@
     document.getElementById('updateButton').value="Add more values";
   }
   
+  function disableClearButton(){
+    document.getElementById('clearButton').disabled=true;
+  }
+  
+  function enableClearButton(){
+    document.getElementById('clearButton').disabled=false;
+  }
+  
+  function clearTable(){
+    var table = document.getElementById('matrix');
+    var rowCount = table.rows.length;
+ 
+    for(var i=0; i<rowCount; i++) {
+        table.deleteRow(0);    
+    }
+    
+    originsInterval = 0;
+    originsLimit = null;
+       
+    disableClearButton();
+    enableInitButton();
+  }
 </script> 
 <style> 
 body {
@@ -231,7 +259,7 @@ td {
         <textarea id="destinations" rows="5" cols="50">48.191405, -124.075584|48.149733, -123.147240</textarea><br />
         <input type="button" id="initButton" onClick="matrixInit()" value="Get matrix"></button>
         <input type="button" id="updateButton" onClick="updateMatrix()" disabled="true" value="Add more values"></button>
-        <input type="button" id="clearButton" onClick="clear()" disabled="true" value="Clear matrix"></button>
+        <input type="button" id="clearButton" onClick="clearTable()" disabled="true" value="Clear matrix"></button>
     </form>
   </div> 
   <table id="matrix"></table> 

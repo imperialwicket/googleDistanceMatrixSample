@@ -6,91 +6,28 @@
 <script type="text/javascript" src="http://maps.google.com/maps/api/js?sensor=false"></script> 
 <script type="text/javascript"> 
  
-  var origins = [
-    "Adams",
-    "Asotin",
-    "Benton",
-    "Chelan",
-    "Clallam",
-    "Clark",
-    "Columbia",
-    "Cowlitz",
-    "Douglas",
-    "Ferry", /* ONE
-    "Franklin",
-    "Garfield",
-    "Grant",
-    "Grays Harbor",
-    "Island",
-    "Jefferson",
-    "King",
-    "Kitsap",
-    "Kittitas",
-    "Lewis",
-    "Lincoln",
-    "Mason",
-    "Okanogan",
-    "Pacific",
-    "Pend Oreille",
-    "Pierce",
-    "San Juan",
-    "Skagit",
-    "Skamania",
-    "Snohomish",
-    "Spokane",
-    "Stevens",
-    "Thurston",
-    "Walla Walla",
-    "Whatcom",
-    "Whitman",
-    "Yakima",*/
-  ];
+  var origins = new Array();
  
-  var destinations = [
-    "48.191405, -124.075584",
-    "48.149733, -123.147240",
-    "48.644388, -122.488747",
-    "48.341783, -122.439995",
-    "48.069499, -122.295799",
-    "48.001547, -122.545738",
-    "47.664139, -122.420082",
-    "47.409642, -122.331505",
-    "47.607367, -122.990799",
-    "47.094108, -122.718773",
-  ];
+  var destinations = new Array();
  
   var query = {
-    origins: origins,
-    destinations: destinations,
     travelMode: google.maps.TravelMode.DRIVING,
-    unitSystem: google.maps.UnitSystem.IMPERIAL
+    unitSystem: google.maps.UnitSystem.METRIC
   };
  
   var dms;
- 
-  function initialize() {
-    
-    createTable();
-    
-    for (var i = 0; i < origins.length; i++) {
-      origins[i] += ' WA, USA';
-    }
- 
-    for (var j = 0; j < destinations.length; j++) {
-      destinations[j] += '';
-    }
- 
-    dms = new google.maps.DistanceMatrixService();
-    
-    updateMatrix();
-  }
- 
+  var originsInterval = 0;
+  var originsLimit;
+  
+  var QUERY_LIMIT = 100;
+  
   function updateMatrix() {
+    updateQuery();
     dms.getDistanceMatrix(query, function(response, status) {
         if (status == "OK") {
           populateTable(response.rows);
         }else{
-            alert(status);
+            alert("There was a problem with the request.  The reported error is '"+status+"'");
         }
       }
     );
@@ -116,15 +53,70 @@
       }
     }
   }
- 
+  
+  /*
+   * Retrieves origins and destinations from textareas and
+   * determines how to build the entire matrix within query limitations.
+   */
+  function getInputs(){
+    var originsString = document.getElementById('origins').value;
+    var destinationsString = document.getElementById('destinations').value;
+    
+    origins = originsString.split("|");
+    destinations = destinationsString.split("|");
+    
+    query.destinations = destinations;
+    originsLimit = Math.floor(QUERY_LIMIT/destinations.length);
+    if(originsLimit > 25){
+        originsLimit = 25;
+    }
+  }
+  
+  /*
+   * Updates the query based on the known sizes of origins and destinations.
+   */
+  function updateQuery(){
+    if(origins.length * destinations.length < QUERY_LIMIT && originsLimit < 25){
+        query.origins = origins;
+        originsInterval=1;
+    }else{
+        query.origins = origins.slice(originsLimit*originsInterval,originsLimit*(originsInterval+1));
+        originsInterval++;
+    } 
+  } 
+  
+  /*
+   * Initializes the matrix data and pulls the first set of near 100 results.
+   */
+  function matrixInit(){
+    dms = new google.maps.DistanceMatrixService();
+    getInputs();
+    createTable();
+    updateMatrix();
+    disableInitButton();
+  } 
+  
   function populateTable(rows) {
+    var elementX;
     for (var i = 0; i < rows.length; i++) {
       for (var j = 0; j < rows[i].elements.length; j++) {
-        var distance = rows[i].elements[j].distance.text;
-        var duration = rows[i].elements[j].duration.text;
-        var td = document.getElementById('element-' + i + '-' + j);
-        td.innerHTML = distance + "<br/>" + duration;
+        elementX = originsLimit*(originsInterval-1) + i;
+        if(rows[i].elements[j].status != "ZERO_RESULTS"){
+            var distance = rows[i].elements[j].distance.text;
+            var duration = rows[i].elements[j].duration.text;
+            var td = document.getElementById('element-' + elementX + '-' + j);
+            td.innerHTML = distance + "<br/>" + duration;
+        }else{
+            var td = document.getElementById('element-' + elementX + '-' + j);
+            td.innerHTML = "No results available," + "<br/>" + "Check your location.";                        
+        }
       }
+    }
+    
+    if(origins.length <= elementX+1){
+        disableUpdateButton(false);
+    }else{
+        disableUpdateButton(true);
     }
   }
  
@@ -154,17 +146,34 @@
     tr.appendChild(td);
     return td;
   }
+  
+  function disableInitButton(){
+    document.getElementById('initButton').disabled=true;
+  }
+  
+  function disableUpdateButton(withTimer){
+    document.getElementById('updateButton').disabled=true;
+    if(withTimer){
+        setTimeout("enableUpdateButton()",10000);
+        document.getElementById('updateButton').value="Wait 10 seconds...";
+    }
+  }
+  
+  function enableUpdateButton(){
+    document.getElementById('updateButton').disabled=false;
+    document.getElementById('updateButton').value="Add more values";
+  }
+  
 </script> 
 <style> 
 body {
   font-family: sans-serif;
+  font-size:.8em;
 }
  
 #container {
-  position: absolute;
-  width:500px;
-  left: 5px;
-  top: 5px;
+  width:100%;
+  padding:15px;
 }
  
 #matrix {
@@ -191,13 +200,39 @@ td {
   
 </style> 
 </head> 
-<body onload="initialize()"> 
+<body> 
 <div id="container"> 
   <div id="controls"> 
-    <select id="units" onChange="updateUnits()"> 
-      <option value="km">Kilometers</option> 
-      <option value="mi" selected="selected">Miles</option> 
-    </select> 
+    Enter pipe delimited origins and destinations.  Optionally, modify the output units to specify imperial or metric results (default is metric); due to the results limitations, changes to the unit system will only affect future requests - it will not affect data already present in the table.  You must limit your destinations to 25 in this utility.  Acceptable values for origins or destinations are:<br />
+    <ul>
+        <li>Text that Google identifies as a single location</li>
+        <li>Latitude and longitude values separated by a comma</li>
+    </ul>
+    Examples that work:
+    <ul>
+        <li>36,-75|34.222,-100.444</li>
+        <li>Lewiston, ME|Midland,MI</li>
+    </ul>
+    Examples that may cause problems:
+    <ul>
+        <li>36 -75|34.222,-300.444</li>
+        <li>Lewiston|Midland</li>
+    </ul>
+    <br />
+    Unit System:<br />
+    <form id="queryInputs">
+        <select id="units" onChange="updateUnits()"> 
+          <option value="km"  selected="selected">Metric</option> 
+          <option value="mi">Imperial</option> 
+        </select><br />
+        Origins:<br />
+        <textarea id="origins" rows="5" cols="50">adams,wa|asotin,wa</textarea><br />
+        Destinations:<br />
+        <textarea id="destinations" rows="5" cols="50">48.191405, -124.075584|48.149733, -123.147240</textarea><br />
+        <input type="button" id="initButton" onClick="matrixInit()" value="Get matrix"></button>
+        <input type="button" id="updateButton" onClick="updateMatrix()" disabled="true" value="Add more values"></button>
+        <input type="button" id="clearButton" onClick="clear()" disabled="true" value="Clear matrix"></button>
+    </form>
   </div> 
   <table id="matrix"></table> 
 </div> 

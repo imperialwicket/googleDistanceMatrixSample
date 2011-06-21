@@ -103,7 +103,7 @@
     getInputs();
     createTable();
     updateMatrix();
-    disableInitButton();
+    disableButton('initButton');
   } 
   
   /*
@@ -128,9 +128,12 @@
     }
     
     if(origins.length <= elementX+1){
-        disableUpdateButton(false);
+        disableButton('updateButton');
+        enableButton('clearButton');
     }else{
-        disableUpdateButton(true);
+        disableButton('updateButton');
+        setTimeout("enableUpdateButton()",10000);
+        document.getElementById('updateButton').value="Wait 10 seconds...";
     }
   }
   
@@ -184,37 +187,14 @@
     document.getElementById(buttonId).disabled=false;
   }
   
-  function disableInitButton(){
-    document.getElementById('initButton').disabled=true;
-  }
-  
-  function enableInitButton(){
-    document.getElementById('initButton').disabled=false;
-  }
-  
-  function disableUpdateButton(withTimer){
-    document.getElementById('updateButton').disabled=true;
-    if(withTimer){
-        setTimeout("enableUpdateButton()",10000);
-        document.getElementById('updateButton').value="Wait 10 seconds...";
-    }else{
-        enableClearButton();
-    }
-  }
-  
+  /*
+   * Renames the updateButton and enables it.
+   */
   function enableUpdateButton(){
-    document.getElementById('updateButton').disabled=false;
+    enableButton('updateButton');
     document.getElementById('updateButton').value="Add more values";
   }
-  
-  function disableClearButton(){
-    document.getElementById('clearButton').disabled=true;
-  }
-  
-  function enableClearButton(){
-    document.getElementById('clearButton').disabled=false;
-  }
-  
+
   /*
    * Clears the results table and resets button states
    */
@@ -229,8 +209,8 @@
     originsInterval = 0;
     originsLimit = null;
        
-    disableClearButton();
-    enableInitButton();
+    disableButton('clearButton');
+    enableButton('initButton');
   }
   
   function instructionsShowHide(){
